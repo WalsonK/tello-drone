@@ -7,9 +7,12 @@ while True:
         ret, frame = forward_video.read()
         if ret:
             cv2.imshow('Forward Brut Cam', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        else:
+            print('No frame received')
             break
-    except Exception as e:
+    except cv2.error as e:
         print('error : {}'.format(e))
 
 forward_video.release()

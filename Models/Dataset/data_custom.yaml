@@ -1,0 +1,6 @@
+train: /Users/walson/Documents/Cours/4A/PA/tello-drone/Models/Dataset/train
+val: /Users/walson/Documents/Cours/4A/PA/tello-drone/Models/Dataset/val
+
+nc: 1
+
+names: ["Walson"]
