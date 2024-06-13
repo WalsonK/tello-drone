@@ -104,6 +104,7 @@ async def rec_img(
     labels: List[str] = Form(...),
 ):
     base_folder = "./Datasets"
+    print( "Received {} images".format(len(images)))
 
     try:
         if not images or not labels:
