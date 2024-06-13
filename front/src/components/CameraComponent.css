@@ -1,0 +1,102 @@
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  .camera-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: auto;
+    padding: 20px;
+    width: 100%;
+    max-width: 640px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .camera-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .camera-wrapper video {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+
+  .bounding-box {
+    border: 2px solid red;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-sizing: border-box;
+    width: 50%;
+    height: 40%;
+  }
+
+  .button-wrapper {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+  }
+
+  button {
+    flex: 1;
+    padding: 12px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    background-color: #007bff;
+    color: white;
+    transition: background-color 0.3s ease;
+  }
+
+  button:hover {
+    background-color: #0056b3;
+  }
+
+  button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+
+  .status-message {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 6px;
+    background-color: #f0f0f0;
+    color: #333;
+  }
+
+  @media (max-width: 640px) {
+    .camera-wrapper {
+      padding: 5px;
+    }
+
+    .bounding-box {
+      width: 80%;
+      height: 50%;
+    }
+
+    button {
+      font-size: 14px;
+      padding: 8px 16px;
+    }
+  }

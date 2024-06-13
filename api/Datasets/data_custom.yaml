@@ -1,0 +1,5 @@
+names:
+- target
+nc: 1
+train: /Users/ncls/work/esgi/4IABD/annual-project/tello-drone/api/Datasets/train
+val: /Users/ncls/work/esgi/4IABD/annual-project/tello-drone/api/Datasets/val
