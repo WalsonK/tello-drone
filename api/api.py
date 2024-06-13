@@ -7,7 +7,7 @@ import uvicorn
 import yaml
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageDraw, UnidentifiedImageError
 from ultralytics import YOLO
 
 app = FastAPI()
@@ -104,7 +104,6 @@ async def rec_img(
     labels: List[str] = Form(...),
 ):
     base_folder = "./Datasets"
-    print( "Received {} images".format(len(images)))
 
     try:
         if not images or not labels:
@@ -139,7 +138,7 @@ async def rec_img(
             train_labels = labels
             val_labels = labels
         else:
-            train_size = max(1, int(total_images * 0.8))
+            train_size = max(1, int(total_images * 0.45))
             train_images = images[:train_size]
             val_images = images[train_size:]
             train_labels = labels[:train_size]
@@ -220,7 +219,7 @@ async def predict(file: UploadFile = File(...)):
 
     # Run YOLO model prediction with a lower confidence threshold
     assert model
-    results = model.predict(source=image_array, save=False, conf=0.80)
+    results = model.predict(source=image_array, save=False, conf=0.60)
 
     predictions = []
     for result in results:
@@ -236,9 +235,20 @@ async def predict(file: UploadFile = File(...)):
                     "score": float(conf),
                     "class_id": int(cls_idx)
                 })
+                # Draw bounding box on the image
+                draw = ImageDraw.Draw(image)
+                draw.rectangle(xyxy, outline="red", width=3)
+                draw.text((xyxy[0], xyxy[1]), f"Conf: {conf:.2f}", fill="red")
+
+    # Save the resultant image with bounding boxes
+    output_path = "result_image.jpg"
+    image.save(output_path)
 
     print(f"Predictions: {predictions}")  # Debug statement
-    return predictions
+    return {
+        "predictions": predictions,
+        "output_image": output_path
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)

@@ -17,7 +17,6 @@ const boundingBoxStyle = {
 const CameraComponent: React.FC = () => {
   const webcamRef = useRef<Webcam>(null);
   const [capturing, setCapturing] = useState<boolean>(false);
-  const [screenshots, setScreenshots] = useState<string[]>([]);
   const [mode, setMode] = useState<"train" | "predict">("predict");
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>("");
@@ -34,50 +33,33 @@ const CameraComponent: React.FC = () => {
   const capture = useCallback(() => {
     if (webcamRef.current) {
       const screenshot = webcamRef.current.getScreenshot();
-      if (screenshot) setScreenshots(prevScreenshots => [...prevScreenshots, screenshot]);
+      return screenshot;
     }
-  }, [webcamRef, setScreenshots]);
+    return null;
+  }, [webcamRef]);
 
   const startCapturing = () => {
-    setScreenshots([]);
     setCapturing(true);
     setStatusMessage("Training started...");
 
     let count = 0;
+    const screenshots: string[] = [];
     const captureInterval = setInterval(() => {
       if (count >= 50) {
-        setCapturing(false);
         clearInterval(captureInterval);
-        sendScreenshots();
+        setCapturing(false);
+        sendScreenshots(screenshots);
       } else {
-        capture();
+        const screenshot = capture();
+        if (screenshot) {
+          screenshots.push(screenshot);
+        }
         count++;
       }
     }, 100);
   };
 
-  const sendScreenshots = async () => {
-    const imageElements = document.querySelectorAll('video');
-    const imagesPromises = Array.from(imageElements).map(async (video, index) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg');
-        const byteString = atob(dataUrl.split(',')[1]);
-        const arrayBuffer = new ArrayBuffer(byteString.length);
-        const intArray = new Uint8Array(arrayBuffer);
-        for (let i = 0; i < byteString.length; i++) {
-          intArray[i] = byteString.charCodeAt(i);
-        }
-        return new Blob([intArray], { type: 'image/jpeg' });
-      }
-    });
-
-    const images = await Promise.all(imagesPromises);
-
+  const sendScreenshots = async (screenshots: string[]) => {
     const formData = new FormData();
     const boundingBox = {
       x: (videoConstraints.width * (50 / 100)) / 2,
@@ -86,8 +68,15 @@ const CameraComponent: React.FC = () => {
       height: videoConstraints.height * (40 / 100)
     };
 
-    images.forEach((image, index) => {
-      formData.append("images", image!, `image_${index}.jpg`);
+    screenshots.forEach((screenshot, index) => {
+      const byteString = atob(screenshot.split(',')[1]);
+      const arrayBuffer = new ArrayBuffer(byteString.length);
+      const intArray = new Uint8Array(arrayBuffer);
+      for (let i = 0; i < byteString.length; i++) {
+        intArray[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([intArray], { type: 'image/jpeg' });
+      formData.append("images", blob, `image_${index}.jpg`);
       formData.append("labels", JSON.stringify({
         class: "head",
         x: boundingBox.x / videoConstraints.width,
