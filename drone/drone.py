@@ -11,8 +11,10 @@ def process_tello_video(drone: Tello):
     if not os.path.exists(PHOTOS_DIR):
         os.makedirs(PHOTOS_DIR)
 
+    last_move_time = time()
     last_capture_time = time()
     CAPTURE_INTERVAL = 2
+    MOVE_INTERVAL = 5
 
     while True:
         frame = drone.get_frame_read().frame
@@ -29,14 +31,17 @@ def process_tello_video(drone: Tello):
                     print(f"Detected action: {detected_action[0]}")
                     if detected_action[0] == "droite":
                         drone.rotate_clockwise(90)
-                        drone.move_forward(30)
                     elif detected_action[0] == "gauche":
                         drone.rotate_counter_clockwise(90)
-                        drone.move_forward(30)
-                    last_capture_time = current_time
+            last_capture_time = current_time
+
+        if current_time - last_move_time >= MOVE_INTERVAL:
+            drone.move_forward(50)
+            last_move_time = current_time
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
+
     drone.streamoff()
     drone.end()
     cv2.destroyAllWindows()
@@ -55,6 +60,7 @@ if __name__ == "__main__":
         drone.connect()
         drone.streamon()
         drone.takeoff()
+        drone.move_up(50)
         process_tello_video(drone)
     except Exception as e:
         print(f"An error occurred: {e}")
