@@ -1,9 +1,22 @@
 import os
-from time import time
+from re import S
+from time import sleep, time
 
 import cv2
+import requests
 from djitellopy import Tello
 from qreader import QReader
+
+
+def predict_user(image):
+    url = "http://localhost:8001/api/predict"
+    files = {"file": ("frame.jpg", open(image, "rb"), "image/jpeg")}
+    response = requests.post(url, files=files)
+    print(response.json())
+    print(len(response.json()))
+    if len(response.json()) > 0:
+        return 1
+    return 0
 
 
 def process_tello_video(drone: Tello):
@@ -24,6 +37,18 @@ def process_tello_video(drone: Tello):
         if current_time - last_capture_time >= CAPTURE_INTERVAL:
             filename = os.path.join(PHOTOS_DIR, f"frame_{int(current_time)}.jpg")
             cv2.imwrite(filename, frame)  # type: ignore
+
+            if predict_user(filename) == 1:
+                print("User predicted! Performing flip and landing...")
+                drone.flip_forward()
+                drone.flip_back()
+                drone.land()
+                sleep(5)
+                drone.takeoff()
+                drone.go_xyz_speed(0, 70, 0, 10)
+                drone.land()
+                break
+
             detected_action = detect_qrcode(filename)
             os.remove(filename)
             if detected_action:
@@ -60,7 +85,7 @@ if __name__ == "__main__":
         drone.connect()
         drone.streamon()
         drone.takeoff()
-        drone.move_up(50)
+        drone.move_up(70)
         process_tello_video(drone)
     except Exception as e:
         print(f"An error occurred: {e}")

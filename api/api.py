@@ -21,12 +21,14 @@ app.add_middleware(
 
 model = None
 
+
 def load_model(force_reload=False):
     global model
     if model is None or force_reload:
         model_path = "models/yolov8n.pt"
         model = YOLO(model_path)
         print("Model loaded successfully.")
+
 
 def create_yaml(folder_path: str, filename: str):
     data = {
@@ -43,6 +45,7 @@ def create_yaml(folder_path: str, filename: str):
     with open(path, "w") as f:
         yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
 
+
 def create_labels(labels: List[str], folder_path: str, filename: str):
     os.makedirs(folder_path, exist_ok=True)
 
@@ -55,6 +58,7 @@ def create_labels(labels: List[str], folder_path: str, filename: str):
             )
     print(f"Saved labels to {path}")
 
+
 def recompose_image(file_data: bytes, folder_path: str, filename: str):
     print(f"File data received for {filename}, size: {len(file_data)} bytes")
     try:
@@ -65,13 +69,17 @@ def recompose_image(file_data: bytes, folder_path: str, filename: str):
         print(f"Saved image to {path}")
     except UnidentifiedImageError as e:
         print(f"Failed to open image {filename}: {e}")
-        raise HTTPException(status_code=400, detail=f"Failed to open image {filename}: {e}")
+        raise HTTPException(
+            status_code=400, detail=f"Failed to open image {filename}: {e}"
+        )
+
 
 def ensure_directory_structure(base_folder: str):
     os.makedirs(os.path.join(base_folder, "train", "images"), exist_ok=True)
     os.makedirs(os.path.join(base_folder, "train", "labels"), exist_ok=True)
     os.makedirs(os.path.join(base_folder, "val", "images"), exist_ok=True)
     os.makedirs(os.path.join(base_folder, "val", "labels"), exist_ok=True)
+
 
 def clear_directory_contents(directory: str):
     for root, dirs, files in os.walk(directory):
@@ -80,6 +88,7 @@ def clear_directory_contents(directory: str):
         for dir in dirs:
             os.rmdir(os.path.join(root, dir))
     print(f"Cleared contents of {directory}")
+
 
 def train_custom_model(
     dataset_path: str,
@@ -93,9 +102,10 @@ def train_custom_model(
 
     if os.path.exists(path):
         model = YOLO(yolo_model)
-        model.train(data=path, epochs=4, imgsz=608, save=True)
+        model.train(data=path, epochs=10, imgsz=608, save=True)
         # Force reload the model after training to ensure updated weights
         load_model(force_reload=True)
+
 
 @app.post("/api/train")
 async def rec_img(
@@ -151,25 +161,45 @@ async def rec_img(
         for index, (image_file, label) in enumerate(zip(train_images, train_labels)):
             img_data = await image_file.read()
             if not img_data:
-                raise HTTPException(status_code=400, detail=f"File {image_file.filename} is empty.")
-            print(f"Processing {image_file.filename}, size: {len(img_data)} bytes for TRAINING")
+                raise HTTPException(
+                    status_code=400, detail=f"File {image_file.filename} is empty."
+                )
+            print(
+                f"Processing {image_file.filename}, size: {len(img_data)} bytes for TRAINING"
+            )
 
-            recompose_image(img_data, os.path.join(base_folder, "train/images"), f"image_{index}.jpg")
-            create_labels([label], os.path.join(base_folder, "train/labels"), f"image_{index}.txt")
+            recompose_image(
+                img_data,
+                os.path.join(base_folder, "train/images"),
+                f"image_{index}.jpg",
+            )
+            create_labels(
+                [label], os.path.join(base_folder, "train/labels"), f"image_{index}.txt"
+            )
 
         # Reset file pointers before reading validation files if train_images == val_images
         if total_images == 1:
-            val_images[0].file.seek(0)  # Reset pointer of the single image if used for both training and validation
+            val_images[0].file.seek(
+                0
+            )  # Reset pointer of the single image if used for both training and validation
 
         # Process validation images and labels
         for index, (image_file, label) in enumerate(zip(val_images, val_labels)):
             img_data = await image_file.read()
             if not img_data:
-                raise HTTPException(status_code=400, detail=f"File {image_file.filename} is empty.")
-            print(f"Processing {image_file.filename}, size: {len(img_data)} bytes for VALIDATION")
+                raise HTTPException(
+                    status_code=400, detail=f"File {image_file.filename} is empty."
+                )
+            print(
+                f"Processing {image_file.filename}, size: {len(img_data)} bytes for VALIDATION"
+            )
 
-            recompose_image(img_data, os.path.join(base_folder, "val/images"), f"image_{index}.jpg")
-            create_labels([label], os.path.join(base_folder, "val/labels"), f"image_{index}.txt")
+            recompose_image(
+                img_data, os.path.join(base_folder, "val/images"), f"image_{index}.jpg"
+            )
+            create_labels(
+                [label], os.path.join(base_folder, "val/labels"), f"image_{index}.txt"
+            )
 
         # Validate directories content after writing
         train_images_list = os.listdir(os.path.join(base_folder, "train/images"))
@@ -182,7 +212,12 @@ async def rec_img(
         print(f"Training labels directory listing: {train_labels_list}")
         print(f"Validation labels directory listing: {val_labels_list}")
 
-        if not train_images_list or not val_images_list or not train_labels_list or not val_labels_list:
+        if (
+            not train_images_list
+            or not val_images_list
+            or not train_labels_list
+            or not val_labels_list
+        ):
             raise HTTPException(
                 status_code=400,
                 detail="Training and validation datasets should not be empty.",
@@ -219,7 +254,7 @@ async def predict(file: UploadFile = File(...)):
 
     # Run YOLO model prediction with a lower confidence threshold
     assert model
-    results = model.predict(source=image_array, save=False, conf=0.60)
+    results = model.predict(source=image_array, save=False, conf=0.90)
 
     predictions = []
     for result in results:
@@ -230,11 +265,13 @@ async def predict(file: UploadFile = File(...)):
                 xyxy = box.xyxy[0].numpy()  # Extract bounding box coordinates
                 conf = box.conf[0].numpy()  # Extract confidence score
                 cls_idx = box.cls[0].numpy()  # Extract class id
-                predictions.append({
-                    "box": xyxy.tolist(),
-                    "score": float(conf),
-                    "class_id": int(cls_idx)
-                })
+                predictions.append(
+                    {
+                        "box": xyxy.tolist(),
+                        "score": float(conf),
+                        "class_id": int(cls_idx),
+                    }
+                )
                 # Draw bounding box on the image
                 draw = ImageDraw.Draw(image)
                 draw.rectangle(xyxy, outline="red", width=3)
@@ -245,10 +282,8 @@ async def predict(file: UploadFile = File(...)):
     image.save(output_path)
 
     print(f"Predictions: {predictions}")  # Debug statement
-    return {
-        "predictions": predictions,
-        "output_image": output_path
-    }
+    return predictions
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)

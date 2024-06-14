@@ -45,7 +45,7 @@ const CameraComponent: React.FC = () => {
     let count = 0;
     const screenshots: string[] = [];
     const captureInterval = setInterval(() => {
-      if (count >= 50) {
+      if (count >= 100) {
         clearInterval(captureInterval);
         setCapturing(false);
         sendScreenshots(screenshots);
@@ -56,7 +56,7 @@ const CameraComponent: React.FC = () => {
         }
         count++;
       }
-    }, 100);
+    }, 300);
   };
 
   const sendScreenshots = async (screenshots: string[]) => {
@@ -124,7 +124,14 @@ const CameraComponent: React.FC = () => {
       });
 
       console.log("Prediction result:", response.data);
-      setStatusMessage("Prediction completed!");
+      setStatusMessage("Their might be an error during recognition");
+      console.log(response.data?.length)
+      if(response.data?.length === 0){
+        setStatusMessage("No one recognized");
+      }
+      else{
+        setStatusMessage(`Someone has been  recognized !`);
+      }
     } catch (error) {
       console.error("Error sending image:", error);
       setStatusMessage("Prediction failed! Please try again.");

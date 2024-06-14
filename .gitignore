@@ -173,6 +173,7 @@ cython_debug/
 # production
 /build
 
+*/Datasets/*
 # misc
 .DS_Store
 .env.local
